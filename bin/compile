@@ -9,3 +9,33 @@ source "$BIN_DIR/support/bash_functions.sh"
 heroku_buildpack_ruby_install_ruby "$BIN_DIR" "$BUILDPACK_DIR"
 
 $heroku_buildpack_ruby_dir/bin/ruby $BIN_DIR/support/ruby_compile $@
+
+CMAKE_VERSION="2.8.6"
+CMAKE_FOLDER=cmake-$CMAKE_VERSION
+CMAKE_PREFIX=`pwd`/.heroku/python  # just use that...
+
+# Install cmake because the world sucks
+if [ ! -f .heroku/python/bin/cmake ]; then
+  bpwatch start install_cmake
+
+    puts-warn "Installing cmake ($CMAKE_VERSION)"
+    curl http://www.cmake.org/files/v2.8/cmake-2.8.6.tar.gz -s | tar zx &> /dev/null
+    if [[ $? != 0 ]] ; then
+      puts-warn "Requested cmake ($CMAKE_VERSION) was not found."
+      puts-warn "Aborting.  :("
+      exit 1
+    fi
+
+    cd $CMAKE_FOLDER
+      ./bootstrap --prefix=$CMAKE_PREFIX | indent
+      make | indent
+    cd ../
+
+    mv $CMAKE_FOLDER/bin/* .heroku/python/bin/
+    if [ ! -d .heroku/python/Modules ]; then
+      mv $CMAKE_FOLDER/Modules .heroku/python/
+    fi
+    rm -r $CMAKE_FOLDER
+
+  bpwatch stop install_cmake
+fi
